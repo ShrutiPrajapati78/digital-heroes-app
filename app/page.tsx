@@ -2,7 +2,7 @@
 
 import Charities from "@/components/charities";
 import Hero from "@/components/hero";
-import HowItWorks from "@/components/howITworks";
+import HowItWorks from "../components/howITworks";
 
 export default function Home() {
   return (
