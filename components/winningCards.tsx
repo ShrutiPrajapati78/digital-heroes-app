@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Trophy, Upload, Clock, CheckCircle2, XCircle, Wallet } from "lucide-react";
 import { supabase } from "../lib/supabase";
+import CountUp from "./countUp";
 
 type Winner = {
   id: string;
@@ -11,6 +13,20 @@ type Winner = {
   verification_status: string;
   payment_status: string;
 };
+
+function Badge({ status }: { status: string }) {
+  const map: Record<string, string> = {
+    pending: "bg-yellow-500/15 text-yellow-300",
+    approved: "bg-green-500/15 text-green-300",
+    rejected: "bg-red-500/15 text-red-300",
+    paid: "bg-cyan-500/15 text-cyan-300",
+  };
+  return (
+    <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${map[status] ?? ""}`}>
+      {status}
+    </span>
+  );
+}
 
 export default function WinningsCard() {
   const [winners, setWinners] = useState<Winner[]>([]);
@@ -55,7 +71,7 @@ export default function WinningsCard() {
       .eq("id", winnerId);
 
     setBusyId("");
-    setMessage(error ? error.message : "Proof uploaded. Admin review ka wait karo.");
+    setMessage(error ? error.message : "Proof uploaded. Waiting for admin review.");
     load();
   }
 
@@ -64,47 +80,67 @@ export default function WinningsCard() {
     .filter((w) => w.payment_status === "paid")
     .reduce((sum, w) => sum + Number(w.prize_amount), 0);
 
-  return (
-    <section className="mt-6 rounded-xl border border-gray-800 bg-gray-900 p-6">
-      <h2 className="text-xl font-semibold">Draws and winnings</h2>
+  const stats = [
+    { icon: Clock, label: "Draws entered", value: entries, prefix: "" },
+    { icon: Trophy, label: "Total won", value: totalWon, prefix: "₹" },
+    { icon: Wallet, label: "Paid out", value: totalPaid, prefix: "₹" },
+  ];
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-3">
-        <div className="rounded-lg bg-gray-800 p-4">
-          <p className="text-sm text-gray-400">Draws entered</p>
-          <p className="text-2xl font-bold">{entries}</p>
-        </div>
-        <div className="rounded-lg bg-gray-800 p-4">
-          <p className="text-sm text-gray-400">Total won</p>
-          <p className="text-2xl font-bold">₹{totalWon}</p>
-        </div>
-        <div className="rounded-lg bg-gray-800 p-4">
-          <p className="text-sm text-gray-400">Paid out</p>
-          <p className="text-2xl font-bold">₹{totalPaid}</p>
-        </div>
+  return (
+    <section className="glass rounded-2xl p-6">
+      <div className="flex items-center gap-3">
+        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-500/15 text-green-400">
+          <Trophy size={20} />
+        </span>
+        <h2 className="text-lg font-semibold">Draws and winnings</h2>
+      </div>
+
+      <div className="mt-5 grid gap-3 sm:grid-cols-3">
+        {stats.map((s, i) => (
+          <div
+            key={s.label}
+            style={{ animationDelay: `${i * 100}ms` }}
+            className="animate-pop rounded-xl bg-white/5 p-4"
+          >
+            <s.icon size={18} className="text-green-400" />
+            <p className="mt-2 text-2xl font-extrabold">
+              <CountUp value={s.value} prefix={s.prefix} />
+            </p>
+            <p className="text-xs text-gray-400">{s.label}</p>
+          </div>
+        ))}
       </div>
 
       <p className="mt-4 text-sm text-gray-400">
-        Next draw: har mahine admin publish karta hai. Active subscription aur kam se
-        kam 3 scores ho to aap entry mein aate hain.
+        Draws are published monthly. With an active subscription and at least 3 scores you are
+        entered automatically.
       </p>
 
       {winners.length > 0 && (
         <ul className="mt-6 space-y-3">
-          {winners.map((w) => (
-            <li key={w.id} className="rounded-lg bg-gray-800 p-4">
-              <p>
-                <b>{w.match_type}-match</b> · ₹{w.prize_amount}
-              </p>
-              <p className="mt-1 text-sm text-gray-400">
-                Verification: {w.verification_status} · Payment: {w.payment_status}
-              </p>
+          {winners.map((w, i) => (
+            <li
+              key={w.id}
+              style={{ animationDelay: `${i * 80}ms` }}
+              className="animate-pop rounded-xl border border-white/10 bg-white/5 p-4"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="font-semibold">
+                  {w.match_type}-match · <span className="text-green-400">₹{w.prize_amount}</span>
+                </p>
+                <div className="flex gap-2">
+                  <Badge status={w.verification_status} />
+                  <Badge status={w.payment_status} />
+                </div>
+              </div>
 
               {!w.proof_url || w.verification_status === "rejected" ? (
-                <label className="mt-3 block text-sm">
-                  <span className="text-gray-300">
+                <label className="mt-3 flex cursor-pointer flex-col gap-2 rounded-lg border border-dashed border-white/20 p-4 text-sm transition hover:border-green-500/50">
+                  <span className="flex items-center gap-2 text-gray-300">
+                    <Upload size={16} />
                     {w.verification_status === "rejected"
-                      ? "Proof reject hua, naya upload karo:"
-                      : "Scores ka screenshot upload karo:"}
+                      ? "Proof rejected. Upload a new screenshot"
+                      : "Upload a screenshot of your scores"}
                   </span>
                   <input
                     type="file"
@@ -114,18 +150,32 @@ export default function WinningsCard() {
                       const f = e.target.files?.[0];
                       if (f) uploadProof(w.id, f);
                     }}
-                    className="mt-2 block text-sm"
+                    className="text-xs text-gray-400 file:mr-3 file:rounded-full file:border-0 file:bg-green-500 file:px-4 file:py-1.5 file:text-xs file:font-semibold file:text-black"
                   />
                 </label>
               ) : (
-                <p className="mt-2 text-sm text-green-400">Proof submitted</p>
+                <p className="mt-3 flex items-center gap-2 text-sm text-green-400">
+                  {w.verification_status === "approved" ? (
+                    <CheckCircle2 size={16} />
+                  ) : (
+                    <Clock size={16} />
+                  )}
+                  {w.verification_status === "approved"
+                    ? "Proof approved"
+                    : "Proof submitted, under review"}
+                </p>
               )}
             </li>
           ))}
         </ul>
       )}
 
-      {message && <p className="mt-4 text-sm text-gray-300">{message}</p>}
+      {message && (
+        <p className="animate-pop mt-4 flex items-center gap-2 text-sm text-gray-300">
+          <XCircle size={0} className="hidden" />
+          {message}
+        </p>
+      )}
     </section>
   );
 }

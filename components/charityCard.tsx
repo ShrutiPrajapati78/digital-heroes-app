@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { HeartHandshake, CheckCircle2, AlertCircle } from "lucide-react";
 import { supabase } from "../lib/supabase";
 
 type Charity = { id: string; name: string };
@@ -10,6 +11,7 @@ export default function CharityCard() {
   const [charityId, setCharityId] = useState("");
   const [percent, setPercent] = useState(10);
   const [message, setMessage] = useState("");
+  const [ok, setOk] = useState(true);
 
   useEffect(() => {
     async function load() {
@@ -33,7 +35,8 @@ export default function CharityCard() {
   async function save() {
     setMessage("");
     if (percent < 10 || percent > 100) {
-      setMessage("Minimum contribution 10% hai.");
+      setOk(false);
+      setMessage("Minimum contribution is 10%.");
       return;
     }
     const { data: u } = await supabase.auth.getUser();
@@ -41,17 +44,23 @@ export default function CharityCard() {
       .from("profiles")
       .update({ charity_id: charityId || null, charity_percent: percent })
       .eq("id", u.user!.id);
+    setOk(!error);
     setMessage(error ? error.message : "Saved!");
   }
 
   return (
-    <section className="rounded-xl border border-gray-800 bg-gray-900 p-6">
-      <h2 className="text-xl font-semibold">Your charity</h2>
+    <section className="glass card-hover h-full rounded-2xl p-6">
+      <div className="flex items-center gap-3">
+        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-500/15 text-green-400">
+          <HeartHandshake size={20} />
+        </span>
+        <h2 className="text-lg font-semibold">Your charity</h2>
+      </div>
 
       <select
         value={charityId}
         onChange={(e) => setCharityId(e.target.value)}
-        className="mt-4 w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-2"
+        className="input mt-5"
       >
         <option value="">Select a charity</option>
         {charities.map((c) => (
@@ -61,25 +70,37 @@ export default function CharityCard() {
         ))}
       </select>
 
-      <label className="mt-4 block text-sm text-gray-400">
-        Contribution (% of subscription, minimum 10)
-      </label>
+      <div className="mt-5 flex items-end justify-between">
+        <label className="text-sm text-gray-400">Contribution (min 10%)</label>
+        <span className="gradient-text text-3xl font-extrabold">{percent}%</span>
+      </div>
       <input
-        type="number"
+        type="range"
         min={10}
         max={100}
+        step={1}
         value={percent}
         onChange={(e) => setPercent(Number(e.target.value))}
-        className="mt-1 w-32 rounded-lg border border-gray-700 bg-gray-800 px-4 py-2"
+        className="mt-2 w-full accent-green-500"
       />
 
       <button
         onClick={save}
-        className="mt-4 block rounded-lg bg-green-600 px-5 py-2 font-medium hover:bg-green-700"
+        className="mt-5 w-full rounded-full bg-green-500 py-2.5 font-semibold text-black transition hover:bg-green-400"
       >
         Save
       </button>
-      {message && <p className="mt-3 text-sm text-gray-300">{message}</p>}
+
+      {message && (
+        <p
+          className={`animate-pop mt-3 flex items-center gap-2 text-sm ${
+            ok ? "text-green-400" : "text-red-300"
+          }`}
+        >
+          {ok ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+          {message}
+        </p>
+      )}
     </section>
   );
 }

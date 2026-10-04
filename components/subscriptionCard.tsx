@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { CreditCard, Loader2, Sparkles } from "lucide-react";
 import { supabase } from "../lib/supabase";
+import Skeleton from "./skeleton";
 
 type Profile = {
   subscription_status: string;
@@ -60,45 +62,82 @@ export default function SubscriptionCard() {
   const active = profile?.subscription_status === "active";
 
   return (
-    <section className="rounded-xl border border-gray-800 bg-gray-900 p-6">
-      <h2 className="text-xl font-semibold">Subscription</h2>
+    <section className="glass card-hover h-full rounded-2xl p-6">
+      <div className="flex items-center gap-3">
+        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-500/15 text-green-400">
+          <CreditCard size={20} />
+        </span>
+        <h2 className="text-lg font-semibold">Subscription</h2>
+      </div>
 
       {!profile ? (
-        <p className="mt-3 text-gray-400">Loading...</p>
+        <div className="mt-5 space-y-3">
+          <Skeleton className="h-6 w-24" />
+          <Skeleton className="h-4 w-full" />
+        </div>
       ) : active ? (
-        <p className="mt-3">
-          <span className="rounded-full bg-green-600/20 px-3 py-1 text-sm text-green-400">
+        <div className="mt-5">
+          <span className="inline-flex items-center gap-2 rounded-full bg-green-500/15 px-3 py-1 text-sm font-medium text-green-400">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-green-400" />
+            </span>
             Active
           </span>
-          <span className="ml-3 text-gray-300">
-            {profile.subscription_plan} plan · renews on {profile.renewal_date}
-          </span>
-        </p>
-      ) : (
-        <>
-          <p className="mt-3 text-gray-400">
-            Aap abhi subscribed nahi hain. Draw mein hissa lene ke liye plan chuno.
+          <p className="mt-4 text-2xl font-bold capitalize">{profile.subscription_plan} plan</p>
+          <p className="mt-1 text-sm text-gray-400">
+            Renews on{" "}
+            {profile.renewal_date
+              ? new Date(`${profile.renewal_date}T00:00:00`).toLocaleDateString("en-IN", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                })
+              : "-"}
           </p>
-          <div className="mt-4 flex gap-3">
+        </div>
+      ) : (
+        <div className="mt-5">
+          <p className="text-sm text-gray-400">
+            You are not subscribed yet. Pick a plan to join the monthly draw.
+          </p>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <button
               onClick={() => subscribe("monthly")}
               disabled={loading}
-              className="rounded-lg bg-green-600 px-5 py-2 font-medium hover:bg-green-700 disabled:opacity-50"
+              className="rounded-xl border border-white/15 bg-white/5 p-4 text-left transition hover:border-green-500/50 hover:bg-white/10 disabled:opacity-50"
             >
-              Monthly
+              <p className="font-semibold">Monthly</p>
+              <p className="mt-1 text-xs text-gray-400">Flexible, cancel anytime</p>
             </button>
+
             <button
               onClick={() => subscribe("yearly")}
               disabled={loading}
-              className="rounded-lg border border-green-600 px-5 py-2 font-medium hover:bg-green-600/10 disabled:opacity-50"
+              className="relative rounded-xl border border-green-500/50 bg-green-500/10 p-4 text-left transition hover:bg-green-500/20 disabled:opacity-50"
             >
-              Yearly (discounted)
+              <span className="absolute -top-2 right-3 inline-flex items-center gap-1 rounded-full bg-green-500 px-2 py-0.5 text-[10px] font-bold text-black">
+                <Sparkles size={10} /> BEST VALUE
+              </span>
+              <p className="font-semibold">Yearly</p>
+              <p className="mt-1 text-xs text-gray-400">Discounted rate</p>
             </button>
           </div>
-        </>
+
+          {loading && (
+            <p className="mt-3 flex items-center gap-2 text-sm text-gray-400">
+              <Loader2 size={16} className="animate-spin" /> Activating...
+            </p>
+          )}
+        </div>
       )}
 
-      {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
+      {error && (
+        <p className="animate-pop mt-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm text-red-300">
+          {error}
+        </p>
+      )}
     </section>
   );
 }
